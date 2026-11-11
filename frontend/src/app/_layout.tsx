@@ -1,24 +1,58 @@
 import { useEffect } from "react";
-import { Appearance, ColorSchemeName } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack } from "expo-router";
 import "../../global.css"
+import { useRouter, useSegments } from "expo-router";
+import { ActivityIndicator, View } from "react-native";
+
+import {
+  AuthProvider,
+} from "@/context/AuthContext";
+
+import { useAuth } from "@/hooks/useAuth";
+
+function RootNavigation() {
+  const { user, loading } = useAuth();
+
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (loading) return;
+
+    const inAuthGroup = segments[0] === "(auth)";
+
+    if (!user && !inAuthGroup) {
+      router.replace("/(auth)/login");
+    } else if (user && inAuthGroup) {
+      router.replace("/(protected)/dashboard");
+    }
+  }, [user, loading, segments]);
+
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return (
+    <Stack screenOptions={{ headerShown: false }} />
+  );
+}
 
 export default function RootLayout() {
-  useEffect(() => {
-    const loadTheme = async () => {
-      try {
-        const savedTheme = await AsyncStorage.getItem("user-theme");
-        if (savedTheme === "dark" || savedTheme === "light") {
-          Appearance.setColorScheme(savedTheme as ColorSchemeName);
-        }
-      } catch (error) {
-        console.error("Failed to load theme:", error);
-      }
-    };
-
-    loadTheme();
-  }, []);
-
-  return <Stack />;
+  return (
+    <AuthProvider>
+      <RootNavigation />
+    </AuthProvider>
+  );
 }
+
+
